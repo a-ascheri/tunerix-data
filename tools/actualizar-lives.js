@@ -32,6 +32,8 @@ const CANALES = {
     A24com: 'a24',           // A24
     c5n: 'c5n',              // C5N
     canal26: 'canal26',      // Canal 26 (4K)
+    americaenvivo: 'americatv',  // América TV
+    PaseosyTurismo: 'argentina', // Paseos y Turismo (Argentina Live 24/7)
     telefenoticias: 'telefe',    // Telefe (Telefe Noticias)
     eltrece: 'canaltrece',   // Canal Trece
     cronicatv: 'cronica',    // Crónica TV
@@ -49,12 +51,23 @@ const BUSCAR_ID = {
     A24com: 'UCR9120YBAqMfntqgRTKmkjQ',
     c5n: 'UCFgk2Q2mVO1BklRQhSv6p0w',
     canal26: 'UCrpMfcQNog595v5gAS-oUsQ',
+    americaenvivo: 'UC6NVDkuzY2exMOVFw4i9oHw',
+    PaseosyTurismo: 'UCsXOwro8CHI2FWotcTw1U2w',
     telefenoticias: 'UChxGASjdNEYHhVKpl667Huw',
     // Canal Trece: la señal en vivo la publica @eltrevyecto (el UC0DM…); "El 13" UCd4D3… resultó
     // ser Canal 13 DE CHILE — no usar. El script solo actualiza cuando @eltrece esté al aire.
     eltrece: 'UC0DM_mHV2u6dj8ig51GkQwg',
     cronicatv: 'UCT7KFGv6s2a-rh2Jq8ZdM1g',
     lanacion: 'UCba3hpU7EFBSk817y9qZkiA',
+};
+
+// Preferencia de TÍTULO: en canales con varios vivos propios (señal fija de noticias
+// + coberturas eventuales), SOLO se publica el vivo cuyo título coincide. Si la señal
+// preferida no está al aire, el canal no se publica y la app sigue con el videoId
+// de stations.json (respaldo) en vez de mostrar una transmisión de evento.
+const PREFER_TITULO = {
+    canal26: /(4k|noticias)/i,          // señal 4K de noticias (evita misas/eventos)
+    lanacion: /(noticias|ln\+)/i,       // señal habitual de LN+ (evita eventos)
 };
 
 const SEG = 5;                                  // margen para enviar respuestas grandes
@@ -103,32 +116,44 @@ async function candidatos(handle) {
     throw new Error('ninguna vía de scrape funcionó');
 }
 
-// elige el primer candidato que esté EN VIVO, embebible, público y DEL canal esperado
-function eleccion(items, channelIdEsperado) {
+// elige el primer candidato que esté EN VIVO, embebible, público y DEL canal esperado.
+// Con PREFER_TITULO del canal, solo cuentan los vivos cuyo título coincide:
+// si la señal de noticias no está al aire, no se entrega una señal de evento.
+function eleccion(items, channelIdEsperado, prefer) {
+    const alAire = [];
     for (const it of items || []) {
         if (it.snippet && it.snippet.liveBroadcastContent === 'live' &&
             it.status && it.status.embeddable && it.status.privacyStatus === 'public' &&
-            (!channelIdEsperado || it.snippet.channelId === channelIdEsperado)) return it.id;
+            (!channelIdEsperado || it.snippet.channelId === channelIdEsperado)) {
+            alAire.push(it);
+        }
     }
-    return null;
+    if (!alAire.length) return null;
+    if (prefer) {
+        for (const it of alAire) {
+            if (prefer.test(String((it.snippet && it.snippet.title) || ''))) return it.id;
+        }
+        return null;
+    }
+    return alAire[0].id;
 }
 
 // --- 2) validación con videos.list (1 unidad) ---
-async function validar(ids, channelIdEsperado) {
+async function validar(ids, channelIdEsperado, prefer) {
     const d = await apiGet('/youtube/v3/videos?part=snippet,status&id=' + ids.join(','));
     if (d.error) throw new Error('API ' + d.error.code + ': ' + d.error.message);
-    return eleccion(d.items, channelIdEsperado);
+    return eleccion(d.items, channelIdEsperado, prefer);
 }
 
 // --- 3) plan B: search.list eventType=live (100 unidades, solo si el scrape falló) ---
-async function searchLive(channelId) {
+async function searchLive(channelId, prefer) {
     const d = await apiGet('/youtube/v3/search?part=snippet&channelId=' + channelId + '&eventType=live&type=video&maxResults=5');
     if (d.error) { console.error('search falló ' + d.error.code + ': ' + d.error.message); return null; }
     if (!d.items || !d.items.length) return null;   // no hay live ahora
     const id = d.items[0].id && d.items[0].id.videoId;
     if (!id) return null;
     const v = await apiGet('/youtube/v3/videos?part=snippet,status&id=' + id);   // igual se valida
-    const pick = eleccion(v.items, channelId);
+    const pick = eleccion(v.items, channelId, prefer);
     if (!pick) console.error('search devolvió ' + id + ' pero no es live publicable');
     return pick;
 }
@@ -144,14 +169,14 @@ async function searchLive(channelId) {
             const cands = await candidatos(handle);
             if (cands.length) {
                 console.log(handle + ': ' + cands.length + ' candidatos, validando…');
-                videoId = await validar(cands, BUSCAR_ID[handle]);         // 1 unidad
+                videoId = await validar(cands, BUSCAR_ID[handle], PREFER_TITULO[handle] || null);         // 1 unidad
                 if (videoId) console.log(handle + ' → en vivo: ' + videoId);
             }
             // El plan B con search (100 un.) SOLO si el scrape falló. Si el scrape devolvió
             // candidatos y el canal no está al aire, esa es la respuesta: no gastar search.
             if (!videoId && !cands.length) {
                 console.log(handle + ': scrape sin candidatos → plan B (search)');
-                videoId = await searchLive(BUSCAR_ID[handle] || '');       // 0–100 unidades
+                videoId = await searchLive(BUSCAR_ID[handle] || '', PREFER_TITULO[handle] || null);       // 0–100 unidades
                 if (videoId) console.log(handle + ' → (por search) en vivo: ' + videoId);
             }
             if (videoId) lives[idEstacion] = videoId;
