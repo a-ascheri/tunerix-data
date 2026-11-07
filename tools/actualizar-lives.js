@@ -50,7 +50,9 @@ const BUSCAR_ID = {
     c5n: 'UCFgk2Q2mVO1BklRQhSv6p0w',
     canal26: 'UCrpMfcQNog595v5gAS-oUsQ',
     telefenoticias: 'UChxGASjdNEYHhVKpl667Huw',
-    eltrece: 'UC0DM_mHV2u6dj8ig51GkQwg',
+    // Canal Trece: la señal 24hs en vivo la publica el canal "El 13" (el canal @eltrece
+    // solo sube notas grabadas y espectaculares puntuales). Esta es la que va al aire.
+    eltrece: 'UCd4D3LfXC_9MY2zSv_3gMgw',
     cronicatv: 'UCT7KFGv6s2a-rh2Jq8ZdM1g',
     lanacion: 'UCba3hpU7EFBSk817y9qZkiA',
 };
