@@ -2,8 +2,8 @@ name: Actualizar Lives YouTube
 
 on:
   schedule:
-    # Corre cada 20 minutos. (No bajar de 15 min por los límites de la API)
-    - cron: '*/40 * * * *'
+    # Cada 40 minutos: corre a los :00 y :60 de cada hora (intervalos de 1 hs).
+    - cron: '0 * * * *'
   # Permite ejecutarlo a mano desde la pestaña "Actions" para probar
   workflow_dispatch:
 
@@ -21,9 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      # checkout@v4 y setup-node@v4 corren con Node 20, ya deprecado por GitHub
-      # (el aviso "Retired" que salió en Actions). v7 es la versión vigente,
-      # que corre con Node 24.
+      # checkout@v7 y setup-node@v7 corren con Node 24 (lo de Node 20 ya está deprecado)
       - name: Descargar el repositorio
         uses: actions/checkout@v7
 
@@ -48,10 +46,15 @@ jobs:
             echo "Sin cambios: lives.json queda igual."
           else
             git commit -m "chore: actualizar lives de YouTube [skip ci]"
-            # Rebase sobre lo último de main: si el bot ya publicó algo después
-            # de que arrancó ESTA corrida (o se re-corría una corrida vieja),
-            # el push no se rechaza (antes tiraba non-fast-forward en 1 seg).
             git fetch origin main
-            git rebase origin/main
+            # Rebase contra lo último de main. Si otra corrida ya publicó algo
+            # más nuevo (incluido RE-CORRER una corrida vieja), el conflicto se
+            # resuelve a favor de lo YA PUBLICADO: la corrida superada no sube
+            # nada y el run cierra verde, no en failure.
+            if ! git rebase -X ours --empty=drop origin/main; then
+              git rebase --abort
+              echo "Corrida superada por una más nueva: no se publica nada."
+              exit 0
+            fi
             git push
           fi
