@@ -3,7 +3,7 @@ name: Actualizar Lives YouTube
 on:
   schedule:
     # Corre cada 20 minutos. (No bajar de 15 min por los límites de la API)
-    - cron: '*/20 * * * *'
+    - cron: '*/40 * * * *'
   # Permite ejecutarlo a mano desde la pestaña "Actions" para probar
   workflow_dispatch:
 
