@@ -65,7 +65,7 @@
   {"id":"c5n","name":"C5N","band":"tv","region":"ar","freq":"Online","genre":"Noticias","icon":"📺","accent":"#ef4444","url":["https://www.youtube.com/watch?v=rZtTUCxpPuI"],"youtube":{"videoId":"rZtTUCxpPuI"}},
   {"id":"canal26","name":"Canal 26","band":"tv","region":"ar","freq":"Online","genre":"Noticias","icon":"📺","accent":"#0ea5e9","url":["https://www.youtube.com/watch?v=iaooxPL8G_I"],"youtube":{"videoId":"iaooxPL8G_I"}},
   {"id":"cronica","name":"Crónica TV","band":"tv","region":"ar","freq":"Online","genre":"Noticias","icon":"📺","accent":"#f59e0b","url":["https://www.youtube.com/watch?v=hw4uHyct4vg"],"youtube":{"videoId":"hw4uHyct4vg"}},
-  {"id":"lnp","name":"LN+","band":"tv","region":"ar","freq":"Online","genre":"Noticias","icon":"📺","accent":"#2563eb","url":["https://www.youtube.com/watch?v=g4-EItUA9q8"],"youtube":{"videoId":"g4-EItUA9q8"}},
+  {"id":"lnp","name":"LN+","band":"tv","region":"ar","freq":"Online","genre":"Noticias","icon":"📺","accent":"#2563eb","url":["https://www.youtube.com/watch?v=FEWZjXJ7M0c"],"youtube":{"videoId":"FEWZjXJ7M0c"}},
   {"id":"argentina","name":"Argentina Live","band":"tv","region":"ar","freq":"Online","genre":"Turismo","icon":"🏝️","accent":"#14b8a6","url":["https://www.youtube.com/watch?v=RugYzs0uftE"],"youtube":{"videoId":"RugYzs0uftE"}},
   {"id":"america-yt","name":"América YT","band":"tv","region":"ar","freq":"Online","genre":"Pública","icon":"📺","accent":"#e63946","disabled":true,"url":["https://www.youtube.com/watch?v=IFcUP8xs27A"],"youtube":{"videoId":"IFcUP8xs27A"}}
 ]
