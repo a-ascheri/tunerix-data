@@ -68,6 +68,7 @@ const BUSCAR_ID = {
 const PREFER_TITULO = {
     canal26: /(4k|noticias)/i,          // señal 4K de noticias (evita misas/eventos)
     lanacion: /(noticias|ln\+)/i,       // señal habitual de LN+ (evita eventos)
+    PaseosyTurismo: { re: /(argentina\s*live)/i, fallback: true },   // FLEXIBLE: "ARGENTINA LIVE 24/7" si está al aire; si no, rota a la otra cámara del canal
 };
 
 const SEG = 5;                                  // margen para enviar respuestas grandes
@@ -117,8 +118,11 @@ async function candidatos(handle) {
 }
 
 // elige el primer candidato que esté EN VIVO, embebible, público y DEL canal esperado.
-// Con PREFER_TITULO del canal, solo cuentan los vivos cuyo título coincide:
-// si la señal de noticias no está al aire, no se entrega una señal de evento.
+// prefer puede ser:
+//   - un REGEX (modo estricto): solo cuentan los vivos cuyo título coincide; si la
+//     señal preferida no está al aire, el canal no se publica (la app usa su respaldo).
+//   - un objeto { re, fallback: true } (modo flexible): publica la preferida si está
+//     al aire; si no, cae al primer vivo del canal (rotación).
 function eleccion(items, channelIdEsperado, prefer) {
     const alAire = [];
     for (const it of items || []) {
@@ -130,10 +134,11 @@ function eleccion(items, channelIdEsperado, prefer) {
     }
     if (!alAire.length) return null;
     if (prefer) {
+        const re = prefer.re || prefer;
         for (const it of alAire) {
-            if (prefer.test(String((it.snippet && it.snippet.title) || ''))) return it.id;
+            if (re.test(String((it.snippet && it.snippet.title) || ''))) return it.id;
         }
-        return null;
+        if (!prefer.fallback) return null;
     }
     return alAire[0].id;
 }
