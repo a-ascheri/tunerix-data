@@ -2,26 +2,35 @@ name: Actualizar Lives YouTube
 
 on:
   schedule:
-    # Corre cada 20 minutos. (No lo bajes a menos de 15 min por el límite de la API)
+    # Corre cada 20 minutos. (No bajar de 15 min por los límites de la API)
     - cron: '*/20 * * * *'
   # Permite ejecutarlo a mano desde la pestaña "Actions" para probar
-  workflow_dispatch: 
+  workflow_dispatch:
 
 # Le da permiso al robot para guardar el archivo lives.json
 permissions:
-  contents: write 
+  contents: write
+
+# Una sola corrida por vez: si dos se cruzan, se enfilan en orden y no se pisan
+concurrency:
+  group: actualizar-lives
+  cancel-in-progress: false
 
 jobs:
   actualizar:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
+      # checkout@v4 y setup-node@v4 corren con Node 20, ya deprecado por GitHub
+      # (el aviso "Retired" que salió en Actions). v7 es la versión vigente,
+      # que corre con Node 24.
       - name: Descargar el repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Ejecutar script de lives
         env:
@@ -34,10 +43,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add lives.json
-          # Solo hace commit si el archivo realmente cambió
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: actualizar lives de YouTube [skip ci]"
-            git push
+          # Solo sube si el archivo realmente cambió
+          if git diff --cached --quiet; then
+            echo "Sin cambios: lives.json queda igual."
           else
-            echo "Sin cambios en lives.json"
+            git commit -m "chore: actualizar lives de YouTube [skip ci]"
+            # Rebase sobre lo último de main: si el bot ya publicó algo después
+            # de que arrancó ESTA corrida (o se re-corría una corrida vieja),
+            # el push no se rechaza (antes tiraba non-fast-forward en 1 seg).
+            git fetch origin main
+            git rebase origin/main
+            git push
           fi
